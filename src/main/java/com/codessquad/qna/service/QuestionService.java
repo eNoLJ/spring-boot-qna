@@ -6,8 +6,11 @@ import com.codessquad.qna.exception.UserSessionException;
 import com.codessquad.qna.model.Question;
 import com.codessquad.qna.model.User;
 import com.codessquad.qna.repository.QuestionRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -48,8 +51,26 @@ public class QuestionService {
         return question;
     }
 
-    public List<Question> findAll() {
-        return this.questionRepository.findAllByDeletedFalse();
+    public Page<Question> findAllQuestionByPage(Pageable pageable) {
+        Page<Question> questionPage = this.questionRepository.findAllByDeletedFalse(pageable);
+        int pageNumber = questionPage.getNumber();
+        int totalPageNumber = questionPage.getTotalPages();
+        if ((totalPageNumber == 0 && pageNumber != 0)
+                || (totalPageNumber != 0 && pageNumber >= totalPageNumber)) {
+            throw new EntityNotFoundException(ErrorMessage.PAGE_NOT_FOUND);
+        }
+        return this.questionRepository.findAllByDeletedFalse(pageable);
+    }
+
+    public List<Integer> getPageRange(Page<Question> questionPage) {
+        List<Integer> numberList = new ArrayList<>();
+        int pageNumber = questionPage.getNumber();
+        int totalPageNumber = questionPage.getTotalPages();
+        int range = (pageNumber < totalPageNumber / 5 * 5) ? 5 : totalPageNumber % 5;
+        for (int i = 1; i <= range; i++) {
+            numberList.add(pageNumber / 5 * 5 + i);
+        }
+        return numberList;
     }
 
     public Question findById(Long id) {
