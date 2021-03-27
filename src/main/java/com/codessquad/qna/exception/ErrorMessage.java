@@ -5,6 +5,7 @@ public enum ErrorMessage {
     USER_NOT_FOUND("해당 유저를 찾을 수 없습니다."),
     QUESTION_NOT_FOUND("해당 질문을 찾을 수 없습니다."),
     ANSWER_NOT_FOUND("해당 답변을 찾을 수 없습니다."),
+    PAGE_NOT_FOUND("해당 페이지를 찾을 수 없습니다."),
     NEED_LOGIN("로그인이 필요한 서비스입니다."),
     ILLEGAL_USER("접근 권한이 없는 유저입니다."),
     DUPLICATED_ID("이미 사용중인 아이디입니다."),
