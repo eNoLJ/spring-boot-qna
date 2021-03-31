@@ -10,8 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 public class QuestionService {
@@ -63,14 +64,14 @@ public class QuestionService {
     }
 
     public List<Integer> getPageRange(Page<Question> questionPage) {
-        List<Integer> numberList = new ArrayList<>();
         int pageNumber = questionPage.getNumber();
         int totalPageNumber = questionPage.getTotalPages();
         int range = (pageNumber < totalPageNumber / 5 * 5) ? 5 : totalPageNumber % 5;
-        for (int i = 1; i <= range; i++) {
-            numberList.add(pageNumber / 5 * 5 + i);
-        }
-        return numberList;
+        return IntStream.rangeClosed(1, range)
+                .map(num -> pageNumber / 5 * 5 + num)
+                .boxed()
+                .collect(Collectors.toList());
+
     }
 
     public Question findById(Long id) {
