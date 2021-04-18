@@ -1,68 +1,54 @@
 package com.codessquad.qna.model;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import javax.persistence.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 @Entity
-public class Answer {
+public class Answer extends AbstractEntity {
 
-    @Id
-    @GeneratedValue
-    private Long id;
-
-    @Column(nullable = false)
-    private String writer;
+    @ManyToOne
+    @JoinColumn(foreignKey = @ForeignKey(name = "fk_answer_to_user"), nullable = false)
+    private User writer;
 
     @Column(nullable = false)
     private String contents;
 
-    @Column(nullable = false)
-    private Date date;
+    @Column(columnDefinition = "boolean default false")
+    private boolean deleted;
 
     @ManyToOne
-    @JoinColumn(foreignKey = @ForeignKey(name = "fk_answer_to_question"))
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(foreignKey = @ForeignKey(name = "fk_answer_to_question"), nullable = false)
     private Question question;
 
-    public boolean nonNull() {
-        return this.id != null;
-    }
-
-    public boolean matchWriter(User loginUser) {
-        return this.writer.equals(loginUser.getUserId());
-    }
-
-    public Long getQuestionId() {
-        if (this.question.nonNull()) {
-            return this.question.getId();
-        }
-        return (long) -1;
-    }
-
-    public void save(String userId, Question question) {
-        this.writer = userId;
-        this.date = new Date();
+    public void save(User writer, Question question) {
+        this.writer = writer;
         this.question = question;
     }
 
     public void update(Answer answer) {
-        this.contents = answer.getContents();
-        this.date = new Date();
+        this.contents = answer.contents;
     }
 
-    public Long getId() {
-        return id;
+    public void delete() {
+        this.deleted = true;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public boolean matchWriter(User loginUser) {
+        return this.writer.matchId(loginUser.getId());
     }
 
-    public String getWriter() {
+    public Long getQuestionId() {
+        return this.question.getId();
+    }
+
+    public User getWriter() {
         return writer;
     }
 
-    public void setWriter(String writer) {
+    public void setWriter(User writer) {
         this.writer = writer;
     }
 
@@ -74,13 +60,12 @@ public class Answer {
         this.contents = contents;
     }
 
-    public String getDate() {
-        SimpleDateFormat simpleDate = new SimpleDateFormat( "yyyy-MM-dd HH:mm");
-        return simpleDate.format(this.date);
+    public boolean isDeleted() {
+        return deleted;
     }
 
-    public void setDate() {
-        this.date = new Date();
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 
     public Question getQuestion() {
@@ -89,6 +74,14 @@ public class Answer {
 
     public void setQuestion(Question question) {
         this.question = question;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() + ", " +
+                "writer: " + this.writer.getUserId() + ", " +
+                "contents: " + this.contents + ", " +
+                "question: " + this.question.getId() + ", ";
     }
 
 }

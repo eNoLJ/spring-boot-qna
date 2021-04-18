@@ -1,78 +1,60 @@
 package com.codessquad.qna.service;
 
+import com.codessquad.qna.exception.EntityNotFoundException;
+import com.codessquad.qna.exception.ErrorMessage;
+import com.codessquad.qna.exception.UserSessionException;
 import com.codessquad.qna.model.Answer;
 import com.codessquad.qna.model.Question;
 import com.codessquad.qna.model.User;
 import com.codessquad.qna.repository.AnswerRepository;
+import com.codessquad.qna.repository.QuestionRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AnswerService {
 
     private final AnswerRepository answerRepository;
-    private final QuestionService questionService;
+    private final QuestionRepository questionRepository;
 
-    public AnswerService(AnswerRepository answerRepository, QuestionService questionService) {
+    public AnswerService(AnswerRepository answerRepository, QuestionRepository questionRepository) {
         this.answerRepository = answerRepository;
-        this.questionService = questionService;
+        this.questionRepository = questionRepository;
     }
 
-    public void save(Long id, Answer answer, User sessionUser) {
-        Question question = questionService.findById(id);
-        if (sessionUser.nonNull() && question.nonNull()) {
-            answer.save(sessionUser.getUserId(), question);
-            this.answerRepository.save(answer);
-        }
+    public Answer save(Long id, Answer answer, User sessionUser) {
+        Question question = this.questionRepository.findByIdAndDeletedFalse(id).orElseThrow(() ->
+                new EntityNotFoundException(ErrorMessage.QUESTION_NOT_FOUND));
+        answer.save(sessionUser, question);
+        return this.answerRepository.save(answer);
     }
 
-    public boolean update(Long id, Answer answer, User sessionUser) {
+    public void update(Long id, Answer answer, User sessionUser) {
         Answer targetAnswer = verifyAnswer(id, sessionUser);
-        if (targetAnswer.nonNull()) {
-            targetAnswer.update(answer);
-            this.answerRepository.save(targetAnswer);
-            return true;
-        }
-        return false;
+        targetAnswer.update(answer);
+        this.answerRepository.save(targetAnswer);
     }
 
-    public void delete(Long id, User sessionUser) {
+    public Answer delete(Long id, User sessionUser) {
         Answer targetAnswer = verifyAnswer(id, sessionUser);
-        if (targetAnswer.nonNull()) {
-            this.answerRepository.delete(targetAnswer);
-        }
+        targetAnswer.delete();
+        return this.answerRepository.save(targetAnswer);
     }
 
     public Answer verifyAnswer(Long id, User sessionUser) {
         Answer targetAnswer = findById(id);
-        if (sessionUser.nonNull() && targetAnswer.nonNull() && targetAnswer.matchWriter(sessionUser)) {
-            return targetAnswer;
+        if (!targetAnswer.matchWriter(sessionUser)) {
+            throw new UserSessionException(ErrorMessage.ILLEGAL_USER);
         }
-        return new Answer();
-    }
-
-    public List<Answer> findAll(Long questionId) {
-        Question question = this.questionService.findById(questionId);
-        if (question.nonNull()) {
-            return answerRepository.findAllByQuestion(question);
-        }
-        return new ArrayList<>();
-    }
-
-    public Answer findById(Long id) {
-        Optional<Answer> answer = this.answerRepository.findById(id);
-        return answer.orElseGet(Answer::new);
+        return targetAnswer;
     }
 
     public Long findQuestionId(Long answerId) {
-        Answer answer = findById(answerId);
-        if (answer.nonNull()) {
-            return answer.getQuestionId();
-        }
-        return (long) -1;
+        return findById(answerId).getQuestionId();
+    }
+
+    public Answer findById(Long id) {
+        return this.answerRepository.findByIdAndDeletedFalse(id).orElseThrow(() ->
+                new EntityNotFoundException(ErrorMessage.ANSWER_NOT_FOUND));
     }
 
 }

@@ -1,18 +1,17 @@
 package com.codessquad.qna.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import javax.persistence.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Entity
-public class Question {
+public class Question extends AbstractEntity {
 
-    @Id
-    @GeneratedValue
-    private Long id;
-
-    @Column(nullable = false)
-    private String writer;
+    @ManyToOne
+    @JoinColumn(foreignKey = @ForeignKey(name = "fk_question_to_user"), nullable = false)
+    private User writer;
 
     @Column(nullable = false)
     private String title;
@@ -20,50 +19,48 @@ public class Question {
     @Column(nullable = false)
     private String contents;
 
-    @Column(nullable = false)
-    private Date date;
+    @Column(columnDefinition = "boolean default false")
+    private boolean deleted;
 
-    @ManyToOne
-    @JoinColumn(foreignKey = @ForeignKey(name = "fk_question_to_user"), nullable = false)
-    private User user;
+    @JsonIgnore
+    @OneToMany(mappedBy = "question", cascade = CascadeType.REMOVE)
+    @OrderBy("id DESC")
+    private List<Answer> answers;
 
-    public boolean nonNull() {
-        return this.id != null;
-    }
-
-    public boolean matchUser(User user) {
-        if (this.user == null) {
-            return false;
-        }
-        return this.user.matchId(user.getId());
-    }
-
-    public void save(User user) {
-        this.writer = user.getUserId();
-        this.date = new Date();
-        this.user = user;
+    public void save(User writer) {
+        this.writer = writer;
     }
 
     public void update(Question question) {
-        this.title = question.getTitle();
-        this.contents = question.getContents();
-        this.date = new Date();
+        this.title = question.title;
+        this.contents = question.contents;
     }
 
-    public Long getId() {
-        return id;
+    public boolean delete() {
+        if (countMismatchAnswers() != 0) {
+            return false;
+        }
+        this.deleted = true;
+        this.answers.forEach(Answer::delete);
+        return true;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public boolean matchWriter(User writer) {
+        return this.writer.matchId(writer.getId());
     }
 
-    public String getWriter() {
+    public int countMismatchAnswers() {
+        return (int )getAnswers().stream()
+                .filter(answer -> !answer.matchWriter(this.writer))
+                .count();
+    }
+
+    public User getWriter() {
         return writer;
     }
 
-    public void setWriter(String writer) {
-        this.writer = writer;
+    public void setWriter(User user) {
+        this.writer = user;
     }
 
     public String getTitle() {
@@ -82,28 +79,30 @@ public class Question {
         this.contents = contents;
     }
 
-    public String getDate() {
-        SimpleDateFormat simpleDate = new SimpleDateFormat( "yyyy-MM-dd HH:mm");
-        return simpleDate.format(this.date);
+    public boolean isDeleted() {
+        return deleted;
     }
 
-    public void setDate() {
-        this.date = new Date();
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 
-    public User getUser() {
-        return user;
+    public List<Answer> getAnswers() {
+        return answers.stream()
+                .filter(answer -> !answer.isDeleted())
+                .collect(Collectors.toList());
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setAnswers(List<Answer> answers) {
+        this.answers = answers;
     }
 
     @Override
     public String toString() {
-        return "writer: " + this.writer + ", " +
+        return super.toString() + ", " +
+                "writer: " + this.writer.getUserId() + ", " +
                 "title: " + this.title + ", " +
-                "contents: " + this.contents;
+                "contents: " + this.contents + ", ";
     }
 
 }
