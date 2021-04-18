@@ -4,12 +4,15 @@ import com.codessquad.qna.model.Question;
 import com.codessquad.qna.service.QuestionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
-
 
 import static com.codessquad.qna.controller.HttpSessionUtils.getUserFromSession;
 
@@ -24,8 +27,16 @@ public class QuestionController {
     }
 
     @GetMapping("/")
-    public String viewMain(Model model) {
-        model.addAttribute("questions", this.questionService.findAll());
+    public String viewMain(Model model, @PageableDefault(size = 15, sort = "createDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<Question> questionPage = this.questionService.findAllQuestionByPage(pageable);
+        model.addAttribute("questions", questionPage.toList());
+        model.addAttribute("pages", this.questionService.getPageRange(questionPage));
+        if (questionPage.hasPrevious()) {
+            model.addAttribute("previous", pageable.previousOrFirst().getPageNumber() + 1);
+        }
+        if(questionPage.hasNext()) {
+            model.addAttribute("next", pageable.next().getPageNumber() + 1);
+        }
         logger.info("메인 페이지 요청");
         return "index";
     }

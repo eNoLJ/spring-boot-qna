@@ -4,7 +4,6 @@ import com.codessquad.qna.exception.*;
 import com.codessquad.qna.model.User;
 import com.codessquad.qna.repository.UserRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 
